@@ -1,64 +1,72 @@
 <%- include('header'); -%> 
 
   <% if (messages.error) { %>
-    <div style="background-color: red;"><%= messages.error %></div>
+    <div style="background-color: red; text-align: center;"><%= messages.error %></div>
   <% } %>
   <% if (messages.success) { %>
-    <div style="background-color: green;"><%= messages.success %></div>
+    <div style="background-color: green; text-align: center;"><%= messages.success %></div>
   <% } %>
 
-  <div class="box">
-    <a href="/register">Register</a>
-    <a href="/login">Log in</a>
-    <a href="/history">History</a>
-
-  </div>
-
-
-  <div class="box" id="heading">
-    <h1><%= listTitle %></h1>
-  </div>
-
-  <div class="box">
-    <% for (let i = 0; i < newItems.length; i++) { %>
-    <div class="item">
-      <input type="checkbox" />
-      <p class="item checked"><%= newItems[i].todoItem %></p>
-      <p class="time checked"><%= newItems[i].time %></p>
-      <p class="time checked"><%= newItems[i].todoTime %></p>
-
-      <a href="/edit/<%= newItems[i].id %>">Edit</a>
-      <form
-        action='delete/<%= newItems[i].id %>'
-        method='POST'
-        style='display:inline'
-      >
-        <input type='hidden' name="todoItem" value='<%= newItems[i].todoItem %>' />
-        <input type='hidden' name="todoTime" value='<%= newItems[i].todoTime %>' />
-        <input type='submit' value='Delete' />
+  
+  <% if (user) { %>
+    <div class="box">
+      <p>Hello, <%= user.username %>!</p>
+      <a href="/logout">Logout</a>
+      <a href="/history">History</a>
+    </div>
+    <div class="box" id="heading">
+      <h1><%= listTitle %></h1>
+    </div>
+  
+    <div class="box">
+      <% for (let i = 0; i < newItems.length; i++) { %>
+      <div class="item">
+        <input type="checkbox" />
+        <p class="item checked"><%= newItems[i].todoItem %></p>
+        <p class="time checked"><%= newItems[i].time %></p>
+        <p class="time checked"><%= newItems[i].todoTime %></p>
+  
+        <a href="/edit/<%= newItems[i].id %>">Edit</a>
+        <form
+          action='delete/<%= newItems[i].id %>'
+          method='POST'
+          style='display:inline'
+        >
+          <input type='hidden' name="todoItem" value='<%= newItems[i].todoItem %>' />
+          <input type='hidden' name="todoTime" value='<%= newItems[i].todoTime %>' />
+          <input type='submit' value='Delete' />
+        </form>
+      </div>
+      <% } %>
+      <form class="item" action="/" method="post">
+        <input
+          type="text"
+          name="newItem"
+          autofocus
+          placeholder="New Item"
+          autocomplete="off"
+          required
+          />
+          <input
+          type="text"
+          name="todoTime"
+          autofocus
+          placeholder="Time to do"
+          autocomplete="off"
+          required
+          />
+        <button type="submit" name="list" value= <%= listTitle %>>+</button>
       </form>
     </div>
-    <% } %>
-    <form class="item" action="/" method="post">
-      <input
-        type="text"
-        name="newItem"
-        autofocus
-        placeholder="New Item"
-        autocomplete="off"
-        required
-        />
-        <input
-        type="text"
-        name="todoTime"
-        autofocus
-        placeholder="Time to do"
-        autocomplete="off"
-        required
-        />
-      <button type="submit" name="list" value= <%= listTitle %>>+</button>
-    </form>
-  </div>
+    <% } else { %>
+      <div class="box">
+        <a href="/register">Register</a>
+        <a href="/login">Log in</a>
+      </div>
+  <% } %>
+
+
+  
 
   
   <%- include('footer'); -%> 

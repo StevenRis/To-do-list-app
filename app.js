@@ -20,7 +20,8 @@ app.use(flash());
 app.use(session({
   secret: 'secret',
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: true,
+  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 } // 1 week
 }));
 
 const workItems = [];
@@ -28,10 +29,16 @@ const workItems = [];
 app.get('/', (req, res) => {
   let day = date.getDate();
 
+
+
   db.all('SELECT * FROM todos', (err, rows) => {
     if (err) return console.log(err);
-    res.render('list', {listTitle: day, newItems: rows})
-  })
+    if (req.session.user) {
+      res.render('list', {listTitle: day, newItems: rows, user: req.session.user});
+    } else {
+      res.redirect('login');
+    };
+  });
 });
 
 app.post('/', (req, res) => {
@@ -87,10 +94,12 @@ app.post('/delete/:id', (req, res) => {
 });
 
 app.get('/history', (req, res) => {
-  db.all('SELECT * FROM history', (err, rows) => {
-    if (err) return console.log(err);
-    res.render('list', {listTitle: 'History', newItems: rows})
-  })
+  if (req.session.user) {
+    db.all('SELECT * FROM history', (err, rows) => {
+      if (err) return console.log(err);
+      res.render('list', {listTitle: 'History', newItems: rows})
+    })
+  }
 });
 
 app.get('/register', (req, res) => {
@@ -129,6 +138,51 @@ app.post('/register', async (req, res) => {
     }
   });
 });
+
+app.get('/login', (req,res) => {
+  res.render('login', {listTitle: 'Log in', messages: req.flash()})
+})
+
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const user = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
+        if(err) reject(err);
+        resolve(row)
+      });
+    })
+
+    if(!user) {
+      req.flash('error', 'Invalid username or password');
+      return res.redirect('login');
+    }
+
+    const result = await bcrypt.compare(password, user.password);
+    if(!result) {
+      req.flash('error', 'Invalid username or password.')
+      return res.redirect('login');
+    }
+    req.session.user = user;
+    req.flash('success', 'Log in successful!')
+    res.redirect('/');
+
+    console.log(req.session.user);
+
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'An error occurred.');
+    res.redirect('login');
+  }
+});
+
+// Log out
+app.get('/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/');
+})
+
 app.listen(port, () => {
   console.log('Server is runnning - http://localhost:8080/');
 });

@@ -1,9 +1,9 @@
-const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('to-do-list.db');
+// const sqlite3 = require('sqlite3').verbose();
+// const db = new sqlite3.Database('to-do-list.db');
 
-db.run(
-  'CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, email TEXT, password TEXT)'
-);
+// db.run(
+//   'CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, email TEXT, password TEXT)'
+// );
 
 // db.run('DROP TABLE history');
 
