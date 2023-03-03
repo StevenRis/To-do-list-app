@@ -7,7 +7,6 @@
     <div style="background-color: green; text-align: center;"><%= messages.success %></div>
   <% } %>
 
-  
   <% if (user) { %>
     <div class="box">
       <p>Hello, <%= user.username %>!</p>
@@ -17,7 +16,7 @@
     <div class="box" id="heading">
       <h1><%= listTitle %></h1>
     </div>
-  
+
     <div class="box">
       <% for (let i = 0; i < newItems.length; i++) { %>
       <div class="item">
@@ -25,12 +24,11 @@
         <p class="item checked"><%= newItems[i].todoItem %></p>
         <p class="time checked"><%= newItems[i].time %></p>
         <p class="time checked"><%= newItems[i].todoTime %></p>
-  
         <a href="/edit/<%= newItems[i].id %>">Edit</a>
         <form
-          action='delete/<%= newItems[i].id %>'
-          method='POST'
-          style='display:inline'
+          action="delete/<%= newItems[i].id %>"
+          method="POST"
+          style="display:inline"
         >
           <input type='hidden' name="todoItem" value='<%= newItems[i].todoItem %>' />
           <input type='hidden' name="todoTime" value='<%= newItems[i].todoTime %>' />
@@ -65,9 +63,5 @@
       </div>
   <% } %>
 
-
-  
-
-  
   <%- include('footer'); -%> 
 

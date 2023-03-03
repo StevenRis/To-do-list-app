@@ -3,20 +3,23 @@ const bodyParser = require('body-parser');
 const flash = require('express-flash');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
-
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('to-do-list.db');
 
 const app = express();
 const port = 8080;
 
+
 const date = require(__dirname + '/date.js');
+const login_required = require(__dirname + '/session.js')
 
 app.set('view engine', 'ejs');
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use(flash());
+
+// Session
 app.use(session({
   secret: 'secret',
   resave: false,
@@ -24,21 +27,28 @@ app.use(session({
   cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 } // 1 week
 }));
 
-const workItems = [];
-
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
   let day = date.getDate();
 
+  try {
+    const existingTodos = await new Promise((resolve, reject) => {
+      db.all('SELECT * FROM todos', (err, rows) => {
+        if (err) reject (err);
+        resolve(rows);
+      });
+    });
 
-
-  db.all('SELECT * FROM todos', (err, rows) => {
-    if (err) return console.log(err);
-    if (req.session.user) {
-      res.render('list', {listTitle: day, newItems: rows, user: req.session.user});
+    if (login_required) {
+      res.render('list', {listTitle: day, newItems: existingTodos, user: req.session.user});
     } else {
-      res.redirect('login');
+      res.redirect('/');
     };
-  });
+
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'An error occurred.');
+    res.redirect('/');
+  }
 });
 
 app.post('/', (req, res) => {
@@ -52,54 +62,82 @@ app.post('/', (req, res) => {
   });
 });
 
-app.get('/edit/:id', (req, res) => {
+app.get('/edit/:id', async (req, res) => {
   const id = req.params.id;
   const day = date.getDate();
 
-  db.all('SELECT * FROM todos WHERE id=?', id,(err, rows) => {
-    if (err) return console.log(err);
-    res.render('edit', { listTitle: day, todoItem: rows[0] });
-  })
+  try {
+    const todoItem = await new Promise((resolve, reject) => {
+      db.all('SELECT * FROM todos WHERE id=?', id,(err, row) => {
+        if (err) reject (err);
+        resolve(row);
+      });
+    })
+    res.render('edit', { listTitle: day, todoItem: todoItem[0] });
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'An error occurred.');
+    res.redirect('/');
+  }
 });
 
-app.post('/edit', (req, res) => {
-  const todoItem = req.body.todoItem;
-  const todoTime = req.body.todoTime;
-  const id = req.body.id;
+app.post('/edit', async (req, res) => {
+  const { id, todoItem, todoTime } = req.body;
 
-  db.run('UPDATE todos SET todoItem=?, todoTime=? WHERE id=?',todoItem, todoTime, id, (err) => {
-    if (err) return console.log(err);
-    res.redirect('/')
-  });
+  try {
+    await new Promise((resolve, reject) => {
+      db.run('UPDATE todos SET todoItem=?, todoTime=? WHERE id=?', [todoItem, todoTime, id], (err) => {
+        if (err) reject (err);
+        resolve;
+      });
+      req.flash('success', 'Item was updated')
+      res.redirect('/')
+    })
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'An error occurred.');
+    res.redirect('/');
+  }
 });
 
-app.post('/delete/:id', (req, res) => {
+app.post('/delete/:id', async (req, res) => {
   const id = req.params.id;
-  const todoItem = req.body.todoItem
-  const todoTime = req.body.todoTime
+  const { todoItem, todoTime } = req.body;
 
-  db.run('INSERT INTO history (todoItem, finish_time, id) VALUES (?,?,?)', todoItem, todoTime, id, (err) => {
-    if (err) {
-      console.log(err);
-    }
-  });
+  try {
+    // await new Promise((resolve, reject) => {
+    //   db.run('INSERT INTO history (todoItem, finish_time, id) VALUES (?,?,?)', [todoItem, todoTime, id], (err) => {
+    //     if (err) reject (err);
+    //     resolve;
+    //     });
+    //   });
 
-  db.run('DELETE FROM todos WHERE id=?', id, (err) => {
-    if (err) {
-      console.log(err);
-    } else {
-      res.redirect('/');
-    }
-  });
+    await new Promise((resolve, reject) => { 
+      db.run('DELETE FROM todos WHERE id=?', [id], (err) => {
+        if (err) reject (err);
+        resolve;
+      });
+      req.flash('success', 'Item was deleted')
+      res.redirect('/')
+    });
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'An error occurred.');
+    res.redirect('/');
+  }
+
 });
 
 app.get('/history', (req, res) => {
-  if (req.session.user) {
-    db.all('SELECT * FROM history', (err, rows) => {
-      if (err) return console.log(err);
-      res.render('list', {listTitle: 'History', newItems: rows})
-    })
-  }
+  db.all('SELECT * FROM history', (err, rows) => {
+    if (err) return console.log(err);
+    if (login_required) {
+      res.render('list', {listTitle: 'History', newItems: rows, user: req.session.user})
+    } else {
+      res.redirect('/');
+    }
+  })
+  
 });
 
 app.get('/register', (req, res) => {
@@ -110,39 +148,46 @@ app.post('/register', async (req, res) => {
   const { username, email, password, confirm_password} = req.body;
 
   // Check if username or email already exists in database
-  const existingUser = await new Promise((resolve, reject) => {
-    db.get('SELECT * FROM users WHERE username=? OR email=?', [username, email], (err, row) => {
-      if (err) reject(err);
-      resolve(row);
+  try {
+    const existingUser = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM users WHERE username=? OR email=?', [username, email], (err, row) => {
+        if (err) reject(err);
+        resolve(row);
+      });
     });
-  });
-  
-  // If user already exists, display flash message and redirect to register page
-  if (existingUser) {
-    req.flash('error', 'Username or email already exists');
-    res.redirect('register');
-    return;
-  }
-  
-  // Hash password using bcrypt
-  const hashedPassword = await bcrypt.hash(password, 10);
-  
-  // Insert new user into database
-  db.run('INSERT INTO users (username, email, password) VALUES (?, ?, ?)', [username, email, hashedPassword], (err) => {
-    if (err) {
-      req.flash('error', 'Error creating user');
+
+    // If user already exists, display flash message and redirect to register page
+    if (existingUser) {
+      req.flash('error', 'Username or email already exists');
       res.redirect('register');
-    } else {
-      req.flash('success', 'Registration successful');
-      res.redirect('/');
+      return;
     }
-  });
+
+    // Hash password using bcrypt
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert new user into database
+    db.run('INSERT INTO users (username, email, password) VALUES (?, ?, ?)', [username, email, hashedPassword], (err) => {
+      if (err) {
+        req.flash('error', 'Error creating user');
+        res.redirect('register');
+      } else {
+        req.flash('success', 'Registration successful');
+        res.redirect('/');
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'An error occurred.');
+    res.redirect('register');
+  }
 });
 
 app.get('/login', (req,res) => {
   res.render('login', {listTitle: 'Log in', messages: req.flash()})
 })
 
+// Log in
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -150,7 +195,7 @@ app.post('/login', async (req, res) => {
     const user = await new Promise((resolve, reject) => {
       db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
         if(err) reject(err);
-        resolve(row)
+        resolve(row);
       });
     })
 
