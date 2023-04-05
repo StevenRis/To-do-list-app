@@ -1,0 +1,34 @@
+<%- include('header'); -%>
+
+<% if (messages.error) { %>
+    <div style="background-color: red;"><%= messages.error %></div>
+  <% } %>
+  <% if (messages.success) { %>
+    <div style="background-color: green;"><%= messages.success %></div>
+  <% } %>
+
+<form action="/register" method="POST">
+    <div>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+    </div>
+    <div>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required>
+    </div>
+    <div>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+    </div>
+    <div>
+        <label for="confirm_password">Confirm password:</label>
+        <input type="password" id="confirm_password" name="confirm_password" required>
+    </div>
+    <div>
+        <button type="submit">Register</button>
+    </div>
+</form>
+
+<%- include('footer'); -%> 
+
+

@@ -1,0 +1,21 @@
+<%- include('header'); -%>
+
+<h1>Edit To Do Item</h1>
+    <form action='/edit' method='POST'>
+      <input type='hidden' name='id' value='<%= todoItem.id %>' />
+      <label>To Do Item</label><br />
+      <input name='todoItem' value='<%= todoItem.todoItem %>' class='field' /><br /><br />
+      <label>Time</label><br />
+      <input
+        name='todoTime'
+        type='text'
+        min='1'
+        max='110'
+        value='<%= todoItem.todoTime %>'
+        class='field'
+      /><br /><br />
+      <input type='submit' value='Edit' />
+    </form>
+    <a href='/'>Back to list</a>
+
+<%- include('footer'); -%> 
