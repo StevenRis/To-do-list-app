@@ -258,6 +258,6 @@ app.get('/logout', (req, res) => {
   res.redirect('/');
 });
 
-app.listen(port, () => {
+app.listen(80, () => {
   console.log('Server is runnning - http://localhost:8080/');
 });
